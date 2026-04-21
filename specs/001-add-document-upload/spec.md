@@ -88,7 +88,7 @@ Document owners and authorized project roles can share documents, edit metadata,
 - **FR-003**: System MUST enforce a per-file maximum size of 25 MB and reject larger files with a clear error message.
 - **FR-004**: System MUST display upload progress and success/failure notifications for each file.
 - **FR-005**: System MUST capture and store metadata: title, description, category, associated project, tags, upload date/time, uploader, file size, and file MIME type (up to 255 chars).
-- **FR-006**: System MUST scan uploaded files for viruses/malware before making them available.
+- **FR-006**: System MUST upload files to a secure staging area and perform asynchronous virus/malware scanning; files remain quarantined until scans pass. Administrators may review and release or permanently remove quarantined files. Scans must complete before files are available for preview or download.
 - **FR-007**: Users MUST be able to view a "My Documents" list showing title, category, upload date, file size, and associated project, with sorting and filtering capabilities.
 - **FR-008**: System MUST provide project-scoped document views showing documents associated with that project to project team members.
 - **FR-009**: Users MUST be able to search documents by title, description, tags, uploader, and associated project; search results must return within 2 seconds.
@@ -97,6 +97,9 @@ Document owners and authorized project roles can share documents, edit metadata,
 - **FR-012**: Document owners MUST be able to share documents with specific users or teams; recipients receive in-app notifications and see documents in a "Shared with Me" section.
 - **FR-013**: System MUST log document-related activities (upload, download, delete, share) for reporting and audit.
 - **FR-014**: Access controls MUST ensure users only see documents they are authorized to access (project membership, explicit share, or admin role).
+
+- **FR-012**: Document owners MUST be able to share documents with specific users or teams and assign a permission level: **Viewer** (read/preview/download), **Editor** (view, edit metadata, replace file), or **Manager** (full control including share and delete). Recipients receive in-app notifications and see documents in a "Shared with Me" section.
+- **FR-014**: Access controls MUST enforce granular permission levels (Viewer/Editor/Manager) across project membership, explicit shares, and admin roles. Permission resolution rules must be deterministic (most-permissive OR explicit owner overrides documented) and documented in the design.
 
 
 ### Key Entities *(include if feature involves data)*
@@ -121,9 +124,16 @@ Document owners and authorized project roles can share documents, edit metadata,
 - **SC-004**: Upload of a 25 MB file completes within 30 seconds on a typical network.
 - **SC-005**: Document list and search pages return results within 2 seconds for up to 500 documents.
 
+## Clarifications
+
+### Session 2026-04-21
+
+- Q: Preferred storage backend? → A: Hybrid: local for dev, cloud for production (Azure Blob Storage for production).
+- Q: Virus scanning approach? → A: Upload to staging, async scan with quarantine until cleared (recommended).
+
 ## Assumptions
 
-- Training environment uses local filesystem storage (no cloud dependencies required).
+- Development and training use local filesystem storage; production uses Azure Blob Storage (no vendor lock-in required).
 - Authentication and role claims already exist in the system and provide necessary identifiers (user id, role, department).
 - Database keys for DocumentId use integer types to match existing schema conventions.
 - MIME types up to 255 characters are required for some Office file types.
