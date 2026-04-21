@@ -1,0 +1,64 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+
+<div class="document-upload">
+    <InputFile OnChange="HandleSelection" multiple />
+    <button type="button" class="btn btn-primary" @onclick="UploadFiles" disabled="@(selectedFiles.Count==0)">Upload</button>
+
+    @if (statusMessages.Count > 0)
+    {
+        <ul>
+            @foreach (var msg in statusMessages)
+            {
+                <li>@msg</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private List<IBrowserFile> selectedFiles = new();
+    private List<string> statusMessages = new();
+
+    private void HandleSelection(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles().ToList();
+    }
+
+    private async Task UploadFiles()
+    {
+        statusMessages.Clear();
+        try
+        {
+            var content = new MultipartFormDataContent();
+
+            foreach (var file in selectedFiles)
+            {
+                var stream = file.OpenReadStream(25 * 1024 * 1024);
+                var sr = new StreamContent(stream);
+                sr.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(sr, "files", file.Name);
+            }
+
+            var resp = await Http.PostAsync("/api/documents", content);
+            if (resp.IsSuccessStatusCode || resp.StatusCode == System.Net.HttpStatusCode.Accepted)
+            {
+                statusMessages.Add("Upload accepted. Processing in background.");
+                selectedFiles.Clear();
+            }
+            else
+            {
+                var txt = await resp.Content.ReadAsStringAsync();
+                statusMessages.Add($"Upload failed: {resp.StatusCode} - {txt}");
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessages.Add($"Upload error: {ex.GetType().Name} - {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+}

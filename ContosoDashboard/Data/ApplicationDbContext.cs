@@ -17,6 +17,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<ProjectMember> ProjectMembers { get; set; } = null!;
     public DbSet<Announcement> Announcements { get; set; } = null!;
+    public DbSet<Document> Documents { get; set; } = null!;
+    public DbSet<DocumentShare> DocumentShares { get; set; } = null!;
+    public DbSet<DocumentActivity> DocumentActivities { get; set; } = null!;
+    public DbSet<DocumentScan> DocumentScans { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +63,13 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Notification>()
             .HasIndex(n => new { n.UserId, n.IsRead });
+
+        // Document indexes
+        modelBuilder.Entity<Document>()
+            .HasIndex(d => d.UploaderId);
+
+        modelBuilder.Entity<Document>()
+            .HasIndex(d => d.Status);
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)

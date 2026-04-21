@@ -3,6 +3,7 @@ using ContosoDashboard.Data;
 using ContosoDashboard.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("TeamLead", policy => policy.RequireRole("TeamLead", "ProjectManager", "Administrator"));
     options.AddPolicy("ProjectManager", policy => policy.RequireRole("ProjectManager", "Administrator"));
     options.AddPolicy("Administrator", policy => policy.RequireRole("Administrator"));
+    // Document management policy: project managers and administrators may manage documents
+    options.AddPolicy("CanManageDocuments", policy => policy.RequireRole("ProjectManager", "Administrator"));
 });
 
 // Register application services
@@ -43,6 +46,15 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Document feature services
+builder.Services.AddSingleton<DocumentQueue>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddHostedService<DocumentScanWorker>();
+
+// Register HttpClient for Blazor Server pages/components and DocumentService
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(sp.GetRequiredService<NavigationManager>().BaseUri) });
+builder.Services.AddScoped<DocumentService>();
 
 // Add HttpContextAccessor for accessing user claims
 builder.Services.AddHttpContextAccessor();
