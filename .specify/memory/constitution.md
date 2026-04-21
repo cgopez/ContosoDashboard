@@ -1,50 +1,61 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Sync Impact Report
+<!--
+Version change: unspecified -> 1.0.0
+Modified principles:
+- [PRINCIPLE_1_NAME] -> Training-First (Non-Production)
+- [PRINCIPLE_2_NAME] -> Offline-First with Migration Path
+- [PRINCIPLE_3_NAME] -> Test-First (Required)
+- [PRINCIPLE_4_NAME] -> Simplicity & Readability
+- [PRINCIPLE_5_NAME] -> Security Education (Mock Controls)
+Added sections:
+- [SECTION_2_NAME] -> Additional Constraints
+- [SECTION_3_NAME] -> Development Workflow
+Removed sections: none
+Templates requiring review: 
+- .specify/templates/plan-template.md ⚠ pending
+- .specify/templates/spec-template.md ⚠ pending
+- .specify/templates/tasks-template.md ⚠ pending
+Follow-up TODOs:
+- RATIFICATION_DATE: TODO - repository ratification date unknown
+-->
+
+# ContosoDashboard Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Training-First (Non-Production)
+All code, documentation, and configuration in this repository are intended SOLELY for training and educational use. Artifacts MUST clearly state training limitations (for example: mock authentication, LocalDB usage, and no external cloud integrations). This repository MUST NOT be used as a production baseline; any production use requires a documented migration plan and security hardening.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Offline-First with Migration Path
+Design choices MUST favour offline operation and deterministic behavior for training environments. Infrastructure dependencies MUST be abstracted behind interfaces (DI or adapters) so that production-grade implementations (Azure SQL, Blob Storage, Microsoft Entra ID) can be substituted without changing business logic. A migration plan MUST exist for any subsystem that swaps implementations.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Test-First (Required)
+New features and changes MUST include automated tests before implementation: unit tests for logic, integration tests for service contracts, and manual validation steps for UI flows. Tests MUST be runnable locally and included in CI where applicable. Tests should fail before implementation and pass after implementation.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Simplicity & Readability
+Code and documentation MUST prioritise clarity for learners: prefer simple, explicit implementations over clever or highly optimized solutions. Public APIs and public-facing examples MUST be well-documented and accompanied by quickstart instructions that allow learners to run examples locally with minimal setup.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Security Education (Mock Controls)
+Security controls implemented in this repository are educational and mock by design. Security-related code MUST explicitly label where it is simplified or insecure for training (for example, mock authentication, no password hashing). Any real-world deployment MUST replace mock controls with production-grade mechanisms and undergo a security review.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Additional Constraints
+• Dependencies MUST be kept minimal to reduce setup friction for students; prefer standard SDKs shipped with the platform.
+• Secrets MUST NOT be committed. Examples requiring credentials MUST use documented placeholders and environment variable patterns.
+• The project MUST build and run with the documented prerequisites (`.NET 8.0 SDK`, `SQL Server LocalDB`) on supported developer platforms.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow
+- Use feature branches and small, focused PRs.
+- Each PR that changes behavior MUST include tests and a one-sentence migration note if the change affects how instructors run the training.
+- Pull requests that alter core infrastructure (database, authentication, seeding) MUST be reviewed by a maintainer and include a rollback + migration plan.
+- Commits intended as teaching checkpoints SHOULD be clearly labeled (e.g., `chore(training): seed data for lesson 3`).
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+Amendments to this constitution MUST be proposed via a pull request that documents the rationale, impact, and migration steps for any behavior changes. Approval requires at least one maintainer review and merging the PR. Versioning follows semantic rules for governance changes:
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- MAJOR: Backwards-incompatible governance or principle removals/renames.
+- MINOR: Addition of a new principle or material expansion of guidance.
+- PATCH: Clarifications, wording fixes, or non-semantic refinements.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+All amendments MUST update the `**Version**` and `**Last Amended**` fields in this document. Ratification date is the original adoption date of the constitution and is recorded when known.
+
+**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): repository ratification date unknown | **Last Amended**: 2026-04-21
