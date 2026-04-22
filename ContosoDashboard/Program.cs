@@ -10,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+// Add controllers for API endpoints
+builder.Services.AddControllers();
 
 // Add authentication state provider for Blazor
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
@@ -113,9 +115,32 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// Log basic request info for debugging uploads
+app.Use(async (context, next) =>
+{
+    var logger = app.Logger;
+    try
+    {
+        logger.LogInformation("Incoming request {Method} {Path} ContentType={ContentType} ContentLength={ContentLength}",
+            context.Request.Method, context.Request.Path, context.Request.ContentType, context.Request.ContentLength);
+    }
+    catch { }
+    await next();
+    try
+    {
+        var endpoint = context.GetEndpoint()?.DisplayName ?? "(none)";
+        logger.LogInformation("Request completed {Method} {Path} => {Status} Endpoint={Endpoint}",
+            context.Request.Method, context.Request.Path, context.Response.StatusCode, endpoint);
+    }
+    catch { }
+});
+
 // Enable authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map API controllers
+app.MapControllers();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");

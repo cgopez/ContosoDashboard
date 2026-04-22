@@ -1,13 +1,34 @@
 @using Microsoft.AspNetCore.Components.Forms
-@inject HttpClient Http
+@inject IJSRuntime JS
 
 <div class="document-upload">
-    <InputFile OnChange="HandleSelection" multiple />
-    <button type="button" class="btn btn-primary" @onclick="UploadFiles" disabled="@(selectedFiles.Count==0)">Upload</button>
+    <input id="fileInput" type="file" multiple @onchange="OnFileInputChanged" />
+
+    <div class="form-row mt-2">
+        <input placeholder="Title" @bind="Title" class="form-control" />
+        <select @bind="Category" class="form-control ms-2">
+            <option value="">Select category</option>
+            <option>Project Documents</option>
+            <option>Team Resources</option>
+            <option>Personal Files</option>
+            <option>Reports</option>
+            <option>Presentations</option>
+            <option>Other</option>
+        </select>
+    </div>
+
+    <button type="button" class="btn btn-primary mt-2" @onclick="UploadFiles" disabled="@(HasNoFiles)">Upload</button>
+
+    @if (progress >= 0)
+    {
+        <div class="progress mt-2">
+            <div class="progress-bar" role="progressbar" style="width:@progress%">@progress%</div>
+        </div>
+    }
 
     @if (statusMessages.Count > 0)
     {
-        <ul>
+        <ul class="mt-2">
             @foreach (var msg in statusMessages)
             {
                 <li>@msg</li>
@@ -17,48 +38,60 @@
 </div>
 
 @code {
-    private List<IBrowserFile> selectedFiles = new();
+    private int progress = -1;
     private List<string> statusMessages = new();
+    private string Title { get; set; } = string.Empty;
+    private string Category { get; set; } = string.Empty;
+    private bool HasNoFiles => _fileCount == 0;
+    private int _fileCount = 0;
 
-    private void HandleSelection(InputFileChangeEventArgs e)
+    private void OnFileInputChanged(ChangeEventArgs e)
     {
-        selectedFiles = e.GetMultipleFiles().ToList();
+        // Update file count from the input element via JS interop
+        _ = UpdateFileCountFromInput();
+    }
+
+    private async Task UpdateFileCountFromInput()
+    {
+        _fileCount = await JS.InvokeAsync<int>("docUpload.getFileCount", "fileInput");
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void ReportProgress(int pct)
+    {
+        progress = pct;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void UploadCompleted(int status, string response)
+    {
+        progress = -1;
+        if (status >= 200 && status < 300)
+        {
+            statusMessages.Add("Upload completed: " + status);
+            // clear file input
+            _ = JS.InvokeVoidAsync("docUpload.clearFileInput", "fileInput");
+            _fileCount = 0;
+        }
+        else
+        {
+            statusMessages.Add($"Upload failed: {status} - {response}");
+        }
+        StateHasChanged();
     }
 
     private async Task UploadFiles()
     {
         statusMessages.Clear();
-        try
-        {
-            var content = new MultipartFormDataContent();
+        progress = 0;
+        StateHasChanged();
 
-            foreach (var file in selectedFiles)
-            {
-                var stream = file.OpenReadStream(25 * 1024 * 1024);
-                var sr = new StreamContent(stream);
-                sr.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-                content.Add(sr, "files", file.Name);
-            }
-
-            var resp = await Http.PostAsync("/api/documents", content);
-            if (resp.IsSuccessStatusCode || resp.StatusCode == System.Net.HttpStatusCode.Accepted)
-            {
-                statusMessages.Add("Upload accepted. Processing in background.");
-                selectedFiles.Clear();
-            }
-            else
-            {
-                var txt = await resp.Content.ReadAsStringAsync();
-                statusMessages.Add($"Upload failed: {resp.StatusCode} - {txt}");
-            }
-        }
-        catch (Exception ex)
-        {
-            statusMessages.Add($"Upload error: {ex.GetType().Name} - {ex.Message}");
-        }
-        finally
-        {
-            StateHasChanged();
-        }
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("docUpload.uploadWithProgress", ElementReferenceAccessor("fileInput"), "/api/documents", Title, Category, dotNetRef);
     }
+
+    // Helper to pass element by id via JS (Interop accepts element references via JS; use id helper)
+    private object ElementReferenceAccessor(string id) => id;
 }

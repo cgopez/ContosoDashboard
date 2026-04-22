@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ContosoDashboard.Data;
+using Microsoft.EntityFrameworkCore;
 using ContosoDashboard.Services;
 using System.Text.Json;
 using ContosoDashboard.Models;
@@ -95,6 +96,20 @@ public class DocumentsController : ControllerBase
                 var title = form["title"].FirstOrDefault() ?? file.FileName;
                 var uploaderId = int.TryParse(form["uploaderId"].FirstOrDefault(), out var uid) ? uid : 0;
 
+                // If uploader not provided in form, try to use authenticated user id, otherwise fallback to seeded user id 4
+                if (uploaderId <= 0)
+                {
+                    var claim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                    if (!string.IsNullOrEmpty(claim) && int.TryParse(claim, out var parsed))
+                    {
+                        uploaderId = parsed;
+                    }
+                    else
+                    {
+                        uploaderId = 4; // fallback seeded user
+                    }
+                }
+
                 var doc = new Document
                 {
                     Title = title,
@@ -110,8 +125,29 @@ public class DocumentsController : ControllerBase
                     Status = DocumentStatus.Staged
                 };
 
+                // Verify uploader exists to avoid FK violations
+                var uploaderExists = await _db.Users.AnyAsync(u => u.UserId == doc.UploaderId);
+                _logger.LogInformation("Uploader existence check: {UploaderId} exists={Exists}", doc.UploaderId, uploaderExists);
+                if (!uploaderExists)
+                {
+                    _logger.LogWarning("Uploader {UploaderId} not found, falling back to admin user 1", doc.UploaderId);
+                    doc.UploaderId = 1;
+                }
+
                 _db.Documents.Add(doc);
-                await _db.SaveChangesAsync();
+                _logger.LogInformation("About to save Document: Title={Title} UploaderId={UploaderId} AssociatedProjectId={AssociatedProjectId} FileSize={FileSize}",
+                    doc.Title, doc.UploaderId, doc.AssociatedProjectId, doc.FileSize);
+                try
+                {
+                    await _db.SaveChangesAsync();
+                }
+                catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+                {
+                    var inner = dbEx.InnerException?.Message ?? "(no inner exception)";
+                    _logger.LogError(dbEx, "DbUpdateException while saving document. Inner: {Inner}. Document: Title={Title} UploaderId={UploaderId} AssociatedProjectId={AssociatedProjectId} StorageKey={StorageKey}",
+                        inner, doc.Title, doc.UploaderId, doc.AssociatedProjectId, doc.StorageKey);
+                    throw;
+                }
 
                 // Enqueue scan job
                 var message = JsonSerializer.Serialize(new { documentId = doc.DocumentId, storageKey, contentType = file.ContentType, uploaderId = uploaderId, size = file.Length });
